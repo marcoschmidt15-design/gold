@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -623,7 +622,8 @@
         // GLOBALE VARIABLEN
         // ============================================
         let currentGoldPrice = null; // Aktueller Goldpreis in Euro pro Gramm
-        const API_URL = 'https://api.gold-api.com/price/XAU'; // gold-api.com - kostenlos, kein API-Key nötig
+        // Metals.dev unterstützt CORS vollständig - kein API-Key nötig für Spot-Preise
+        const API_URL = 'https://api.metals.dev/v1/spot?api_key=demo';
 
         // ============================================
         // DOM-ELEMENTE
@@ -693,87 +693,72 @@
         // ============================================
         
         async function fetchGoldPrice() {
-            debugLog = {}; // Reset Debug Log
+            debugLog = {};
             debugLog['Zeitstempel'] = new Date().toLocaleString('de-DE');
             debugLog['API URL'] = API_URL;
-            
+
             try {
-                // Hole Goldpreis in USD
                 debugLog['Request Status'] = 'Wird gesendet...';
                 const response = await fetch(API_URL);
-                
-                debugLog['Response Status'] = response.status;
-                debugLog['Response OK'] = response.ok ? 'Ja' : 'Nein';
+
+                debugLog['Response Status']      = response.status;
+                debugLog['Response OK']          = response.ok ? 'Ja' : 'Nein';
                 debugLog['Response Status Text'] = response.statusText;
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
+
+                if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+
                 const data = await response.json();
-                
-                // Rohdaten ausgeben
                 debugLog['Rohdaten'] = JSON.stringify(data, null, 2);
-                
-                // Preis direkt extrahieren
-                const price = data.price;
-                debugLog['price'] = price;
-                
-                if (!price) {
-                    throw new Error('Kein Preis in Response gefunden');
-                }
-                
-                // price ist USD pro Unze
+
+                // metals.dev: data.metals.gold = USD pro Feinunze
+                const price = data?.metals?.gold;
+                debugLog['data.metals.gold'] = price;
+
+                if (!price) throw new Error('Kein Preis in data.metals.gold gefunden');
+
                 const usdPerOunce = price;
                 debugLog['USD pro Unze'] = usdPerOunce;
-                
-                // Hole EUR/USD Wechselkurs
+
                 const exchangeRate = await fetchExchangeRate();
                 debugLog['EUR/USD Wechselkurs'] = exchangeRate;
-                
-                // Berechne EUR Preise
-                const eurPerOunce = usdPerOunce * exchangeRate; // Preis EUR pro Unze
-                const eurPerGram = eurPerOunce / 31.1035; // Preis EUR pro Gramm
-                
-                debugLog['EUR pro Unze'] = eurPerOunce.toFixed(2);
+
+                const eurPerOunce = usdPerOunce * exchangeRate;
+                const eurPerGram  = eurPerOunce / 31.1035;
+
+                debugLog['EUR pro Unze']  = eurPerOunce.toFixed(2);
                 debugLog['EUR pro Gramm'] = eurPerGram.toFixed(2);
                 debugLog['Status'] = '✅ Erfolgreich';
-                
+
                 currentGoldPrice = eurPerGram;
-                
-                // Aktualisiere Anzeige mit Preis pro Gramm und pro Unze
-                currentPriceElement.innerHTML = `
-                    <div style="margin-bottom: 4px;">${formatCurrency(eurPerGram)} / Gramm</div>
-                    <div style="font-size: 14px; opacity: 0.8;">${formatCurrency(eurPerOunce)} / Unze</div>
-                `;
+
+                currentPriceElement.innerHTML =
+                    '<div style="margin-bottom:4px">' + formatCurrency(eurPerGram) + ' / Gramm</div>' +
+                    '<div style="font-size:14px;opacity:0.8">' + formatCurrency(eurPerOunce) + ' / Unze</div>';
                 hideError();
-                
+
             } catch (error) {
-                debugLog['Status'] = '❌ Fehler';
+                debugLog['Status']        = '❌ Fehler';
                 debugLog['Fehlermeldung'] = error.message;
-                debugLog['Fehler Stack'] = error.stack || 'nicht verfügbar';
-                
-                // Fallback: Verwende 4100 Euro pro Unze
+                debugLog['Fehler Stack']  = error.stack || 'nicht verfügbar';
+
                 const fallbackEurPerOunce = 4100;
-                const fallbackEurPerGram = fallbackEurPerOunce / 31.1035; // Preis EUR pro Gramm
-                
-                debugLog['Fallback EUR pro Unze'] = fallbackEurPerOunce;
+                const fallbackEurPerGram  = fallbackEurPerOunce / 31.1035;
+
+                debugLog['Fallback EUR pro Unze']  = fallbackEurPerOunce;
                 debugLog['Fallback EUR pro Gramm'] = fallbackEurPerGram.toFixed(2);
-                
+
                 currentGoldPrice = fallbackEurPerGram;
-                
-                // Aktualisiere Anzeige mit Hinweis auf Fallback-Preis
-                currentPriceElement.innerHTML = `
-                    <div style="margin-bottom: 4px;">${formatCurrency(fallbackEurPerGram)} / Gramm <span style="font-size: 11px; opacity: 0.7;">(Schätzwert)</span></div>
-                    <div style="font-size: 14px; opacity: 0.8;">${formatCurrency(fallbackEurPerOunce)} / Unze</div>
-                `;
-                
-                // Zeige Fehlermeldung an
-                showError(`API-Fehler: ${error.message} - Verwende Fallback-Preis`);
+
+                currentPriceElement.innerHTML =
+                    '<div style="margin-bottom:4px">' + formatCurrency(fallbackEurPerGram) +
+                    ' / Gramm <span style="font-size:11px;opacity:0.7">(Schätzwert)</span></div>' +
+                    '<div style="font-size:14px;opacity:0.8">' + formatCurrency(fallbackEurPerOunce) + ' / Unze</div>';
+
+                showError('API-Fehler: ' + error.message + ' – Fallback-Preis wird verwendet');
             }
-            
-            // Aktualisiere Debug-Tabelle
+
             updateDebugTable();
+            sendHeightToParent();
         }
 
         // ============================================
@@ -945,6 +930,22 @@
         window.addEventListener('load', () => {
             gramInput.focus();
         });
+
+        // ============================================
+        // IFRAME HÖHE — sendet aktuelle Höhe an Elternseite
+        // ============================================
+        function sendHeightToParent() {
+            const height = document.body.scrollHeight;
+            window.parent.postMessage({ type: 'gwrHeight', height: height }, '*');
+        }
+
+        // Höhe bei jedem Resize neu senden
+        const resizeObserver = new ResizeObserver(() => sendHeightToParent());
+        resizeObserver.observe(document.body);
+
+        // Erste Höhe nach kurzer Verzögerung senden (DOM muss stabil sein)
+        setTimeout(sendHeightToParent, 300);
+
     })();
     </script>
 </body>
