@@ -1,1 +1,951 @@
 
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold-Wertrechner</title>
+    <style>
+        /* ============================================
+           CSS-VARIABLEN (Light & Dark Mode)
+           ============================================ */
+        :root {
+            /* Light Mode Farben */
+            --bg-secondary: #ffffff;
+            --text-primary: #2c2c2c;
+            --text-secondary: #666666;
+            --gold-primary: #d4af37;
+            --gold-secondary: #f4e4b0;
+            --gold-accent: #c5a028;
+            --border-color: #e8e8e8;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --input-bg: #ffffff;
+            --result-bg: #fffef9;
+        }
+
+        [data-theme="dark"] {
+            /* Dark Mode Farben */
+            --bg-secondary: #252525;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --gold-primary: #d4af37;
+            --gold-secondary: #8b7423;
+            --gold-accent: #f4e4b0;
+            --border-color: #3a3a3a;
+            --shadow: rgba(0, 0, 0, 0.4);
+            --input-bg: #2a2a2a;
+            --result-bg: #2f2f2f;
+        }
+
+        /* ============================================
+           GRUNDSTILE
+           ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: transparent !important;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: color 0.3s ease;
+        }
+
+        /* ============================================
+           HAUPTCONTAINER
+           ============================================ */
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--bg-secondary);
+            border-radius: 24px;
+            padding: 48px 40px;
+            box-shadow: 0 8px 32px var(--shadow);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* ============================================
+           ÜBERSCHRIFT
+           ============================================ */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--gold-primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* ============================================
+           DARK MODE TOGGLE
+           ============================================ */
+        .theme-toggle {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            border-color: var(--gold-primary);
+        }
+
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--gold-primary);
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:active svg {
+            transform: rotate(20deg);
+        }
+
+        /* ============================================
+           AKTUELLER PREIS
+           ============================================ */
+        .price-display {
+            background: linear-gradient(135deg, var(--gold-secondary), var(--gold-primary));
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .price-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+
+        .price-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .price-loading {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* ============================================
+           FORMULAR
+           ============================================ */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            letter-spacing: 0.2px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 18px;
+            background: var(--input-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1);
+        }
+
+        input[type="number"]::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        /* Chrome, Safari, Edge, Opera - Spinner verstecken */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Firefox - Spinner verstecken */
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* ============================================
+           BUTTON
+           ============================================ */
+        #gwrCalcButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        #gwrCalcButton:active {
+            transform: translateY(0);
+        }
+
+        /* ============================================
+           DEBUG BUTTON
+           ============================================ */
+        .debug-toggle {
+            position: absolute;
+            top: 84px;
+            right: 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px var(--shadow);
+            color: var(--text-secondary);
+        }
+
+        .debug-toggle:hover {
+            transform: scale(1.05);
+            border-color: var(--gold-primary);
+            color: var(--gold-primary);
+        }
+
+        /* ============================================
+           DEBUG MODAL
+           ============================================ */
+        .debug-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .debug-modal-content {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .debug-modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .debug-modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: var(--text-primary);
+        }
+
+        .debug-close {
+            background: none;
+            border: none;
+            font-size: 32px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .debug-close:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .debug-modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: calc(90vh - 80px);
+        }
+
+        #debugTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        #debugTable th {
+            background: var(--gold-secondary);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--gold-primary);
+            color: var(--text-primary);
+        }
+
+        #debugTable td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        #debugTable tr:hover {
+            background: var(--result-bg);
+        }
+
+        #debugTable td:first-child {
+            font-weight: 600;
+            color: var(--gold-primary);
+            width: 200px;
+        }
+
+        /* ============================================
+           ERGEBNIS
+           ============================================ */
+        .result {
+            background: var(--result-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .result.has-value {
+            border-color: var(--gold-primary);
+            background: linear-gradient(135deg, var(--result-bg), rgba(212, 175, 55, 0.05));
+        }
+
+        .result-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gold-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .result-placeholder {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* ============================================
+           FEHLERMELDUNG
+           ============================================ */
+        .error-message {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        [data-theme="dark"] .error-message {
+            background: #4a2020;
+            border-color: #c53030;
+            color: #feb2b2;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* ============================================
+           INFO-TEXT
+           ============================================ */
+        .info-text {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 24px;
+            line-height: 1.6;
+        }
+
+        /* ============================================
+           RESPONSIVE DESIGN
+           ============================================ */
+        @media (max-width: 640px) {
+            .container {
+                padding: 32px 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .theme-toggle {
+                width: 44px;
+                height: 44px;
+                top: 16px;
+                right: 16px;
+            }
+
+            .debug-toggle {
+                width: 44px;
+                height: 44px;
+                top: 72px;
+                right: 16px;
+            }
+
+            .result-value {
+                font-size: 28px;
+            }
+
+            .price-value {
+                font-size: 20px;
+            }
+
+            .debug-modal-content {
+                margin: 10px;
+            }
+
+            #debugTable {
+                font-size: 12px;
+            }
+
+            #debugTable th,
+            #debugTable td {
+                padding: 8px;
+            }
+        }
+
+        /* ============================================
+           ANIMATIONEN
+           ============================================ */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result.has-value {
+            animation: fadeIn 0.4s ease;
+        }
+
+        /* ============================================
+           LOADING SPINNER
+           ============================================ */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-secondary);
+            border-radius: 50%;
+            border-top-color: var(--gold-primary);
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Dark Mode Toggle -->
+    <button class="theme-toggle" id="gwrThemeToggle" aria-label="Theme wechseln">
+        <svg id="gwrSunIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12C18 15.3137 15.3137 18 12 18ZM12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16ZM11 1H13V4H11V1ZM11 20H13V23H11V20ZM3.51472 4.92893L4.92893 3.51472L7.05025 5.63604L5.63604 7.05025L3.51472 4.92893ZM16.9497 18.364L18.364 16.9497L20.4853 19.0711L19.0711 20.4853L16.9497 18.364ZM19.0711 3.51472L20.4853 4.92893L18.364 7.05025L16.9497 5.63604L19.0711 3.51472ZM5.63604 16.9497L7.05025 18.364L4.92893 20.4853L3.51472 19.0711L5.63604 16.9497ZM23 11V13H20V11H23ZM4 11V13H1V11H4Z"/>
+        </svg>
+        <svg id="gwrMoonIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">
+            <path d="M10 7C10 10.866 13.134 14 17 14C18.9584 14 20.729 13.1957 21.9995 11.8995C22 11.933 22 11.9665 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C12.0335 2 12.067 2 12.1005 2.00049C10.8043 3.27098 10 5.04157 10 7ZM4 12C4 16.4183 7.58172 20 12 20C15.0583 20 17.7158 18.2839 19.062 15.7621C18.3945 15.9187 17.7035 16 17 16C12.0294 16 8 11.9706 8 7C8 6.29648 8.08133 5.60547 8.2379 4.938C5.71611 6.28423 4 8.9417 4 12Z"/>
+        </svg>
+    </button>
+
+    <!-- Debug Log Button -->
+    <button class="debug-toggle" id="gwrDebugToggle" aria-label="Debug-Log anzeigen">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M4 8H8V4H4V8ZM10 20H14V16H10V20ZM4 20H8V16H4V20ZM4 14H8V10H4V14ZM10 14H14V10H10V14ZM16 4V8H20V4H16ZM10 8H14V4H10V8ZM16 14H20V10H16V14ZM16 20H20V16H16V20Z"/>
+        </svg>
+    </button>
+
+    <!-- Debug Log Modal -->
+    <div id="gwrDebugModal" class="debug-modal" style="display: none;">
+        <div class="debug-modal-content">
+            <div class="debug-modal-header">
+                <h2>API Debug Log</h2>
+                <button id="gwrCloseDebug" class="debug-close">&times;</button>
+            </div>
+            <div class="debug-modal-body">
+                <table id="debugTable">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Wert</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gwrDebugTableBody">
+                        <tr>
+                            <td colspan="2" style="text-align: center; color: var(--text-secondary);">Noch keine Daten geladen...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Gold-Wertrechner</h1>
+            <p class="subtitle">Genauer Preis von heute</p>
+        </div>
+
+        <!-- Nykyinen kullan hinta -->
+        <div class="price-display">
+            <div class="price-label">Heutiger Preis</div>
+            <div class="price-value" id="gwrCurrentPrice">
+                <span class="price-loading">Wird geladen<span class="spinner"></span></span>
+            </div>
+        </div>
+
+        <!-- Virheviesti -->
+        <div class="error-message" id="gwrErrorMessage"></div>
+
+        <!-- Syöttökenttä -->
+        <div class="form-group">
+            <label for="gwrGramInput">Grammzahl eingeben</label>
+            <div style="display: flex; gap: 12px;">
+                <input 
+                    type="number" 
+                    id="gwrGramInput" 
+                    placeholder="z.B. 10" 
+                    min="0"
+                    step="0.01"
+                    aria-label="Anzahl der Gramm"
+                    style="flex: 1;"
+                >
+                <button id="gwrCalcButton" style="
+                    padding: 16px 32px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    background: linear-gradient(135deg, var(--gold-primary), var(--gold-accent));
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    font-family: inherit;
+                    white-space: nowrap;
+                ">Berechnen</button>
+            </div>
+        </div>
+
+        <!-- Tulos -->
+        <div class="result" id="gwrResultBox">
+            <div class="result-label">Goldwert heute</div>
+            <div class="result-placeholder" id="gwrResultPlaceholder">Grammzahl oben eingeben</div>
+            <div class="result-value" id="gwrResultValue" style="display: none;"></div>
+        </div>
+
+        <!-- Info-teksti -->
+        <p class="info-text">
+            Der Preis wird automatisch aktualisiert. Drücken Sie Enter, um den Wert zu berechnen.
+        </p>
+    </div>
+
+    <script>
+    (function() {
+        // ============================================
+        // GLOBALE VARIABLEN
+        // ============================================
+        let currentGoldPrice = null; // Aktueller Goldpreis in Euro pro Gramm
+        const API_URL = 'https://api.gold-api.com/price/XAU'; // gold-api.com - kostenlos, kein API-Key nötig
+
+        // ============================================
+        // DOM-ELEMENTE
+        // ============================================
+        const themeToggle = document.getElementById('gwrThemeToggle');
+        const sunIcon = document.getElementById('gwrSunIcon');
+        const moonIcon = document.getElementById('gwrMoonIcon');
+        const gramInput = document.getElementById('gwrGramInput');
+        const calculateButton = document.getElementById('gwrCalcButton');
+        const resultBox = document.getElementById('gwrResultBox');
+        const resultValue = document.getElementById('gwrResultValue');
+        const resultPlaceholder = document.getElementById('gwrResultPlaceholder');
+        const currentPriceElement = document.getElementById('gwrCurrentPrice');
+        const errorMessage = document.getElementById('gwrErrorMessage');
+        const debugToggle = document.getElementById('gwrDebugToggle');
+        const debugModal = document.getElementById('gwrDebugModal');
+        const closeDebug = document.getElementById('gwrCloseDebug');
+        const debugTableBody = document.getElementById('gwrDebugTableBody');
+
+        // Debug Log Daten
+        let debugLog = {};
+
+        // ============================================
+        // DARK MODE VERWALTUNG
+        // ============================================
+        
+        // Lade gespeichertes Theme oder verwende System-Theme
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                updateThemeIcons(true);
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                updateThemeIcons(false);
+            }
+        }
+
+        // Wechsle Theme
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcons(newTheme === 'dark');
+        }
+
+        // Aktualisiere Theme-Icons
+        function updateThemeIcons(isDark) {
+            if (isDark) {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            }
+        }
+
+        // Theme-Toggle-Listener
+        themeToggle.addEventListener('click', toggleTheme);
+
+        // ============================================
+        // GOLDPREIS VON API ABRUFEN
+        // ============================================
+        
+        async function fetchGoldPrice() {
+            debugLog = {}; // Reset Debug Log
+            debugLog['Zeitstempel'] = new Date().toLocaleString('de-DE');
+            debugLog['API URL'] = API_URL;
+            
+            try {
+                // Hole Goldpreis in USD
+                debugLog['Request Status'] = 'Wird gesendet...';
+                const response = await fetch(API_URL);
+                
+                debugLog['Response Status'] = response.status;
+                debugLog['Response OK'] = response.ok ? 'Ja' : 'Nein';
+                debugLog['Response Status Text'] = response.statusText;
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Rohdaten ausgeben
+                debugLog['Rohdaten'] = JSON.stringify(data, null, 2);
+                
+                // Preis direkt extrahieren
+                const price = data.price;
+                debugLog['price'] = price;
+                
+                if (!price) {
+                    throw new Error('Kein Preis in Response gefunden');
+                }
+                
+                // price ist USD pro Unze
+                const usdPerOunce = price;
+                debugLog['USD pro Unze'] = usdPerOunce;
+                
+                // Hole EUR/USD Wechselkurs
+                const exchangeRate = await fetchExchangeRate();
+                debugLog['EUR/USD Wechselkurs'] = exchangeRate;
+                
+                // Berechne EUR Preise
+                const eurPerOunce = usdPerOunce * exchangeRate; // Preis EUR pro Unze
+                const eurPerGram = eurPerOunce / 31.1035; // Preis EUR pro Gramm
+                
+                debugLog['EUR pro Unze'] = eurPerOunce.toFixed(2);
+                debugLog['EUR pro Gramm'] = eurPerGram.toFixed(2);
+                debugLog['Status'] = '✅ Erfolgreich';
+                
+                currentGoldPrice = eurPerGram;
+                
+                // Aktualisiere Anzeige mit Preis pro Gramm und pro Unze
+                currentPriceElement.innerHTML = `
+                    <div style="margin-bottom: 4px;">${formatCurrency(eurPerGram)} / Gramm</div>
+                    <div style="font-size: 14px; opacity: 0.8;">${formatCurrency(eurPerOunce)} / Unze</div>
+                `;
+                hideError();
+                
+            } catch (error) {
+                debugLog['Status'] = '❌ Fehler';
+                debugLog['Fehlermeldung'] = error.message;
+                debugLog['Fehler Stack'] = error.stack || 'nicht verfügbar';
+                
+                // Fallback: Verwende 4100 Euro pro Unze
+                const fallbackEurPerOunce = 4100;
+                const fallbackEurPerGram = fallbackEurPerOunce / 31.1035; // Preis EUR pro Gramm
+                
+                debugLog['Fallback EUR pro Unze'] = fallbackEurPerOunce;
+                debugLog['Fallback EUR pro Gramm'] = fallbackEurPerGram.toFixed(2);
+                
+                currentGoldPrice = fallbackEurPerGram;
+                
+                // Aktualisiere Anzeige mit Hinweis auf Fallback-Preis
+                currentPriceElement.innerHTML = `
+                    <div style="margin-bottom: 4px;">${formatCurrency(fallbackEurPerGram)} / Gramm <span style="font-size: 11px; opacity: 0.7;">(Schätzwert)</span></div>
+                    <div style="font-size: 14px; opacity: 0.8;">${formatCurrency(fallbackEurPerOunce)} / Unze</div>
+                `;
+                
+                // Zeige Fehlermeldung an
+                showError(`API-Fehler: ${error.message} - Verwende Fallback-Preis`);
+            }
+            
+            // Aktualisiere Debug-Tabelle
+            updateDebugTable();
+        }
+
+        // ============================================
+        // WECHSELKURS ABRUFEN
+        // ============================================
+        
+        async function fetchExchangeRate() {
+            try {
+                // Verwende kostenlosen exchangerate-api.com Service
+                const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+                const data = await response.json();
+                return data.rates.EUR; // EUR/USD Wechselkurs
+            } catch (error) {
+                // Fallback-Kurs, falls API nicht funktioniert
+                return 0.92; // Ungefährer EUR/USD Kurs
+            }
+        }
+
+        // ============================================
+        // BERECHNUNG
+        // ============================================
+        
+        function calculateValue() {
+            const grams = parseFloat(gramInput.value);
+            
+            // Validierung
+            if (isNaN(grams) || grams <= 0) {
+                resetResult();
+                return;
+            }
+            
+            if (!currentGoldPrice) {
+                // Warte bis Preis geladen ist, dann berechne
+                setTimeout(calculateValue, 500);
+                return;
+            }
+            
+            // Berechne Wert
+            const totalValue = grams * currentGoldPrice;
+            
+            // Zeige Ergebnis
+            displayResult(totalValue);
+        }
+
+        // ============================================
+        // ERGEBNIS ANZEIGEN
+        // ============================================
+        
+        function displayResult(value) {
+            resultValue.textContent = formatCurrency(value);
+            resultValue.style.display = 'block';
+            resultPlaceholder.style.display = 'none';
+            resultBox.classList.add('has-value');
+        }
+
+        function resetResult() {
+            resultValue.style.display = 'none';
+            resultPlaceholder.style.display = 'block';
+            resultBox.classList.remove('has-value');
+        }
+
+        // ============================================
+        // HILFSFUNKTIONEN
+        // ============================================
+        
+        // Formatiere Währung im europäischen Format
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('de-DE', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value);
+        }
+
+        // Zeige Fehlermeldung
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+        }
+
+        // Verstecke Fehlermeldung
+        function hideError() {
+            errorMessage.classList.remove('show');
+        }
+
+        // ============================================
+        // DEBUG LOG FUNKTIONEN
+        // ============================================
+        
+        function updateDebugTable() {
+            debugTableBody.innerHTML = '';
+            
+            if (Object.keys(debugLog).length === 0) {
+                debugTableBody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--text-secondary);">Noch keine Daten geladen...</td></tr>';
+                return;
+            }
+            
+            Object.entries(debugLog).forEach(([key, value]) => {
+                const row = document.createElement('tr');
+                const keyCell = document.createElement('td');
+                const valueCell = document.createElement('td');
+                
+                keyCell.textContent = key;
+                valueCell.textContent = value;
+                
+                row.appendChild(keyCell);
+                row.appendChild(valueCell);
+                debugTableBody.appendChild(row);
+            });
+        }
+
+        function openDebugModal() {
+            debugModal.style.display = 'flex';
+        }
+
+        function closeDebugModal() {
+            debugModal.style.display = 'none';
+        }
+
+        // ============================================
+        // EVENT LISTENER
+        // ============================================
+        
+        // Berechne Wert bei Enter-Taste
+        gramInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                calculateValue();
+            }
+        });
+
+        // Berechne Wert bei Button-Klick
+        calculateButton.addEventListener('click', () => {
+            calculateValue();
+        });
+
+        // Lösche Ergebnis wenn Feld geleert wird
+        gramInput.addEventListener('input', () => {
+            if (gramInput.value === '') {
+                resetResult();
+            }
+        });
+
+        // Debug Modal öffnen/schließen
+        debugToggle.addEventListener('click', openDebugModal);
+        closeDebug.addEventListener('click', closeDebugModal);
+        
+        // Modal schließen bei Klick außerhalb
+        debugModal.addEventListener('click', (e) => {
+            if (e.target === debugModal) {
+                closeDebugModal();
+            }
+        });
+
+        // ============================================
+        // INITIALISIERUNG
+        // ============================================
+        
+        // Lade Theme beim Seitenladen
+        loadTheme();
+
+        // Hole Goldpreis sofort beim Seitenladen
+        fetchGoldPrice();
+
+        // Aktualisiere Preis alle 5 Minuten
+        setInterval(fetchGoldPrice, 5 * 60 * 1000);
+
+        // Fokussiere Eingabefeld beim Seitenladen
+        window.addEventListener('load', () => {
+            gramInput.focus();
+        });
+    })();
+    </script>
+</body>
+</html>
